@@ -1,20 +1,81 @@
 (function () {
 'use strict';
 
-angular.module('MsgApp', [])
-.controller('MsgController', MsgController);
+angular.module('ShoppingListApp', [])
+.controller('ShoppingListController', ShoppingListController)
+.provider('ShoppingList', ShoppingListProvider)
+.config(Config);
 
-MsgController.$inject = ['$scope'];
-function MsgController($scope) {
-  $scope.name = "Yaakov";
-  $scope.stateOfBeing = "hungry";
+Config.$inject = ['ShoppingListProvider'];
+function Config(ShoppingListProvider) {
+  ShoppingListProvider.defaults.maxItems = 5;
+}
 
-  $scope.sayMessage = function () {
-    return "Yaakov likes to eat healthy snacks at night!";
+ShoppingListController.$inject = ['ShoppingList'];
+function ShoppingListController(ShoppingList) {
+  var list = this;
+
+  list.items = ShoppingList.getItems();
+
+  list.itemName = "";
+  list.itemQuantity = "";
+
+  list.addItem = function () {
+    try {
+      ShoppingList.addItem(list.itemName, list.itemQuantity);
+    } catch (error) {
+      list.errorMessage = error.message;
+    }
   };
 
-  $scope.feedYaakov = function () {
-    $scope.stateOfBeing = "fed";
+  list.removeItem = function (itemIndex) {
+    ShoppingList.removeItem(itemIndex);
+  };
+}
+
+
+// If not specified, maxItems assumed unlimited
+function ShoppingListService(maxItems) {
+  var service = this;
+
+  // List of shopping items
+  var items = [];
+
+  service.addItem = function (itemName, quantity) {
+    if ((maxItems === undefined) ||
+        (maxItems !== undefined) && (items.length < maxItems)) {
+      var item = {
+        name: itemName,
+        quantity: quantity
+      };
+      items.push(item);
+    }
+    else {
+      throw new Error("Max items (" + maxItems + ") reached.");
+    }
+  };
+
+  service.removeItem = function (itemIndex) {
+    items.splice(itemIndex, 1);
+  };
+
+  service.getItems = function () {
+    return items;
+  };
+}
+
+
+function ShoppingListProvider() {
+  var provider = this;
+
+  provider.defaults = {
+    maxItems: 100
+  };
+
+  provider.$get = function () {
+    var shoppingList = new ShoppingListService(provider.defaults.maxItems);
+
+    return shoppingList;
   };
 }
 
