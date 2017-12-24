@@ -1,35 +1,68 @@
 (function () {
 'use strict';
 
-angular.module('ShoppingListApp', [])
+angular.module('ShoppingListDirectiveApp', [])
 .controller('ShoppingListController', ShoppingListController)
-.provider('ShoppingList', ShoppingListProvider)
-.config(Config);
+.factory('ShoppingListFactory', ShoppingListFactory)
+// .controller('ShoppingListDirectiveController', ShoppingListDirectiveController)
+.directive('shoppingList', ShoppingListDirective);
 
-Config.$inject = ['ShoppingListProvider'];
-function Config(ShoppingListProvider) {
-  ShoppingListProvider.defaults.maxItems = 5;
+
+function ShoppingListDirective() {
+  var ddo = {
+    templateUrl: 'shoppingList.html',
+    scope: {
+      items: '<',
+      title: '@'
+    },
+    // controller: 'ShoppingListDirectiveController as list',
+    controller: ShoppingListDirectiveController,
+    controllerAs: 'list',
+    bindToController: true
+  };
+
+  return ddo;
 }
 
-ShoppingListController.$inject = ['ShoppingList'];
-function ShoppingListController(ShoppingList) {
+
+function ShoppingListDirectiveController() {
   var list = this;
 
-  list.items = ShoppingList.getItems();
+  list.cookiesInList = function () {
+    for (var i = 0; i < list.items.length; i++) {
+      var name = list.items[i].name;
+      if (name.toLowerCase().indexOf("cookie") !== -1) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+}
+
+
+ShoppingListController.$inject = ['ShoppingListFactory'];
+function ShoppingListController(ShoppingListFactory) {
+  var list = this;
+
+  // Use factory to create new shopping list service
+  var shoppingList = ShoppingListFactory();
+
+  list.items = shoppingList.getItems();
+  var origTitle = "Shopping List #1";
+  list.title = origTitle + " (" + list.items.length + " items )";
 
   list.itemName = "";
   list.itemQuantity = "";
 
   list.addItem = function () {
-    try {
-      ShoppingList.addItem(list.itemName, list.itemQuantity);
-    } catch (error) {
-      list.errorMessage = error.message;
-    }
+    shoppingList.addItem(list.itemName, list.itemQuantity);
+    list.title = origTitle + " (" + list.items.length + " items )";
   };
 
   list.removeItem = function (itemIndex) {
-    ShoppingList.removeItem(itemIndex);
+    shoppingList.removeItem(itemIndex);
+    list.title = origTitle + " (" + list.items.length + " items )";
   };
 }
 
@@ -65,18 +98,12 @@ function ShoppingListService(maxItems) {
 }
 
 
-function ShoppingListProvider() {
-  var provider = this;
-
-  provider.defaults = {
-    maxItems: 100
+function ShoppingListFactory() {
+  var factory = function (maxItems) {
+    return new ShoppingListService(maxItems);
   };
 
-  provider.$get = function () {
-    var shoppingList = new ShoppingListService(provider.defaults.maxItems);
-
-    return shoppingList;
-  };
+  return factory;
 }
 
 })();
